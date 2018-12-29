@@ -1,15 +1,12 @@
+// client.cpp
 
-#include<iostream>
-#include<cstdio>
-#include<Winsock2.h>
-#include<ctime>
-#include<string>
-#include <sstream>
+#include <iostream>
+#include <cstdio>
+#include <Winsock2.h>
 
 using namespace std;
-#pragma comment(lib,"ws2_32.lib")
+
 int main() {
-    // 加载socket动态链接库(dll)
     WORD wVersionRequested;
     WSADATA wsaData;    // 这结构是用于接收Wjndows Socket的结构信息的
     int err;
@@ -27,52 +24,38 @@ int main() {
         WSACleanup( );
         return -1;
     }
-    SOCKET sockSrv = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET sockClient = socket(AF_INET, SOCK_STREAM, 0);
     SOCKADDR_IN addrSrv;
-    addrSrv.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+    addrSrv.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");      // 本地回路地址是127.0.0.1;
     addrSrv.sin_family = AF_INET;
     addrSrv.sin_port = htons(6000);
-    bind(sockSrv, (SOCKADDR*)&addrSrv, sizeof(SOCKADDR));
-    listen(sockSrv, 100);
-    SOCKADDR_IN  addrClient;
-    int len = sizeof(SOCKADDR);
-    while(true) {   // 不断等待客户端请求的到来
-        SOCKET sockConn = accept(sockSrv, (SOCKADDR*)&addrClient, &len);
+    connect(sockClient, (SOCKADDR*)&addrSrv, sizeof(SOCKADDR));
+    send(sockClient, "你好，我是客户端！\n", strlen("你好，我是客户端！\n")+1, 0);
+    char recvBuf[100];
+    recv(sockClient, recvBuf, 100, 0);
+    printf("%s\n", recvBuf);
+    printf("我们来聊天吧！\n");
+    cout<<endl;
+    do{
+        char talk[100];
+        cout<<"写字板：";
+        gets(talk);
+        send(sockClient, talk, strlen(talk)+1, 0);          // 发送信息
+        cout<<"客户端："<<talk<<endl;
 
-        char sendBuf[100];
-        char timeBuf[100];
-        time_t t;
-        time(&t);
-        tm local = *localtime(&t);
-        int year=local.tm_year+1900;
-        int mon=local.tm_mon+1;
-        int day=local.tm_mday;
-        int hour=local.tm_hour;
-        int minu=local.tm_min;
-        int sec=local.tm_sec;
-        stringstream ss;
-        ss<<year<<":"<<mon<<":"<<day<<"    "<<hour<<":"<<minu<<":"<<sec<<endl;
-        string str=ss.str();
-        sprintf(sendBuf, ("你好，我是服务器！\n"+str).c_str());
-        send(sockConn, sendBuf, strlen(sendBuf)+1, 0);  // 发送显示欢迎信息
         char recvBuf[100];
-        recv(sockConn, recvBuf, 100, 0);
-        cout<<(recvBuf);        // 接收第一次信息
-        char *clientName="客户端";
-        cout<<"我们来聊天吧！"<<endl;
-        while(true) {
-            char recevbuff[100];
-            recv(sockConn,recevbuff,100,0);
-            cout<<clientName<<":"<<recevbuff<<endl;
+        recv(sockClient, recvBuf, 100, 0);
+        printf("%s%s\n", "服务器：", recvBuf);     // 接收信息
+    }while(true);
 
-            char sendbuff[100];
-            cout<<"写字板：";
-            gets(sendbuff);
-            send(sockConn,sendbuff,strlen(sendbuff)+1,0);
-            cout<<"服务器："<<sendbuff<<endl;
-        }
-        closesocket(sockConn);
-    }
+
+    closesocket(sockClient);
+    WSACleanup();   // 终止对套接字库的使用
+
+    printf("\n");
+    system("pause");
     return 0;
+
+
 
 }
